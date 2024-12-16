@@ -1,0 +1,191 @@
+{
+  "trading_date": "2024-12-13",
+  "data_collection_time": "2024-12-13T20:59:05.268375-05:00",
+  "companies": {
+    "AAPL": {
+      "name": "Apple Inc.",
+      "market_cap": 3750689160990.0,
+      "shares_outstanding": 15115823000,
+      "currency": "usd",
+      "description": "Apple is among the largest companies in the world, with a broad portfolio of hardware and software products targeted at consumers and businesses. Apple's iPhone makes up a majority of the firm sales, and Apple's other products like Mac, iPad, and Watch are designed around the iPhone as the focal point of an expansive software ecosystem. Apple has progressively worked to add new applications, like streaming video, subscription bundles, and augmented reality. The firm designs its own software and semiconductors while working with subcontractors like Foxconn and TSMC to build its products and chips. Slightly less than half of Apple's sales come directly through its flagship stores, with a majority of sales coming indirectly through partnerships and distribution.",
+      "trading_data": {
+        "date": "2024-12-13",
+        "close_price": 248.13,
+        "open_price": 247.815,
+        "high_price": 249.2902,
+        "low_price": 246.24,
+        "volume": 31526663,
+        "vwap": 247.7389,
+        "timestamp": 1734066000000
+      }
+    },
+    "MSFT": {
+      "name": "Microsoft Corp",
+      "market_cap": 3325399124681.52,
+      "shares_outstanding": 7434880776,
+      "currency": "usd",
+      "description": "Microsoft develops and licenses consumer and enterprise software. It is known for its Windows operating systems and Office productivity suite. The company is organized into three equally sized broad segments: productivity and business processes (legacy Microsoft Office, cloud-based Office 365, Exchange, SharePoint, Skype, LinkedIn, Dynamics), intelligence cloud (infrastructure- and platform-as-a-service offerings Azure, Windows Server OS, SQL Server), and more personal computing (Windows Client, Xbox, Bing search, display advertising, and Surface laptops, tablets, and desktops).",
+      "trading_data": {
+        "date": "2024-12-13",
+        "close_price": 447.27,
+        "open_price": 448.435,
+        "high_price": 451.43,
+        "low_price": 445.58,
+        "volume": 19711730,
+        "vwap": 447.5586,
+        "timestamp": 1734066000000
+      }
+    },
+    "GOOGL": {
+      "name": "Alphabet Inc. Class A Common Stock",
+      "market_cap": 2323586620000.0,
+      "shares_outstanding": 12241000000,
+      "currency": "usd",
+      "description": "Alphabet is a holding company that wholly owns internet giant Google. The California-based company derives slightly less than 90% of its revenue from Google services, the vast majority of which is advertising sales. Alongside online ads, Google services houses sales stemming from Google's subscription services (YouTube TV, YouTube Music among others), platforms (sales and in-app purchases on Play Store), and devices (Chromebooks, Pixel smartphones, and smart home products such as Chromecast). Google's cloud computing platform, or GCP, accounts for roughly 10% of Alphabet's revenue with the firm's investments in up-and-coming technologies such as self-driving cars (Waymo), health (Verily), and internet access (Google Fiber) making up the rest.",
+      "trading_data": {
+        "date": "2024-12-13",
+        "close_price": 189.82,
+        "open_price": 191.01,
+        "high_price": 192.73,
+        "low_price": 189.64,
+        "volume": 23415170,
+        "vwap": 190.8675,
+        "timestamp": 1734066000000
+      }
+    },
+    "AMZN": {
+      "name": "Amazon.Com Inc",
+      "market_cap": 2391744403879.68,
+      "shares_outstanding": 10515011008,
+      "currency": "usd",
+      "description": "Amazon is the leading online retailer and marketplace for third party sellers. Retail related revenue represents approximately 75% of total, followed by Amazon Web Services' cloud computing, storage, database, and other offerings (15%), advertising services (5% to 10%), and other the remainder. International segments constitute 25% to 30% of Amazon's non-AWS sales, led by Germany, the United Kingdom, and Japan.",
+      "trading_data": {
+        "date": "2024-12-13",
+        "close_price": 227.46,
+        "open_price": 228.4,
+        "high_price": 230.2,
+        "low_price": 225.8608,
+        "volume": 27993276,
+        "vwap": 227.8663,
+        "timestamp": 1734066000000
+      }
+    },
+    "NVDA": {
+      "name": "Nvidia Corp",
+      "market_cap": 3287782500000.0,
+      "shares_outstanding": 24490000000,
+      "currency": "usd",
+      "description": "Nvidia is a leading developer of graphics processing units. Traditionally, GPUs were used to enhance the experience on computing platforms, most notably in gaming applications on PCs. GPU use cases have since emerged as important semiconductors used in artificial intelligence. Nvidia not only offers AI GPUs, but also a software platform, Cuda, used for AI model development and training. Nvidia is also expanding its data center networking solutions, helping to tie GPUs together to handle complex workloads.",
+      "trading_data": {
+        "date": "2024-12-13",
+        "close_price": 134.25,
+        "open_price": 138.94,
+        "high_price": 139.6,
+        "low_price": 132.54,
+        "volume": 225832354,
+        "vwap": 135.0011,
+        "timestamp": 1734066000000
+      }
+    },
+    "META": {
+      "name": "Meta Platforms, Inc. Class A Common Stock",
+      "market_cap": 1566066461446.55,
+      "shares_outstanding": 2524488533,
+      "currency": "usd",
+      "description": "Meta is the largest social media company in the world, boasting close to 4 billion monthly active users worldwide. The firm's \"Family of Apps,\" its core business, consists of Facebook, Instagram, Messenger, and WhatsApp. End users can leverage these applications for a variety of different purposes, from keeping in touch with friends to following celebrities and running digital businesses for free. Meta packages customer data, gleaned from its application ecosystem and sells ads to digital advertisers. While the firm has been investing heavily in its Reality Labs business, it remains a very small part of Meta's overall sales.",
+      "trading_data": {
+        "date": "2024-12-13",
+        "close_price": 620.35,
+        "open_price": 627.22,
+        "high_price": 631.08,
+        "low_price": 616.886,
+        "volume": 8047352,
+        "vwap": 621.4086,
+        "timestamp": 1734066000000
+      }
+    },
+    "TSLA": {
+      "name": "Tesla, Inc. Common Stock",
+      "market_cap": 1400324325045.57,
+      "shares_outstanding": 3210059659,
+      "currency": "usd",
+      "description": "Tesla is a vertically integrated battery electric vehicle automaker and developer of autonomous driving software. The company has multiple vehicles in its fleet, which include luxury and midsize sedans, crossover SUVs, a light truck, and a semi truck. Tesla also plans to begin selling more affordable vehicles, a sports car, and a robotaxi. Global deliveries in 2023 were a little over 1.8 million vehicles. The company sells batteries for stationary storage for residential and commercial properties including utilities and solar panels and solar roofs for energy generation. Tesla also owns a fast-charging network.",
+      "trading_data": {
+        "date": "2024-12-13",
+        "close_price": 436.23,
+        "open_price": 420.0,
+        "high_price": 436.3,
+        "low_price": 415.71,
+        "volume": 88478467,
+        "vwap": 428.4037,
+        "timestamp": 1734066000000
+      }
+    }
+  },
+  "rankings": {
+    "by_market_cap": [
+      {
+        "ticker": "AAPL",
+        "name": "Apple Inc.",
+        "market_cap": 3750689160990.0,
+        "pct_of_mag7": 20.78451644648332,
+        "pct_of_sp500": 6.631299757975801
+      },
+      {
+        "ticker": "MSFT",
+        "name": "Microsoft Corp",
+        "market_cap": 3325399124681.52,
+        "pct_of_mag7": 18.427763493955016,
+        "pct_of_sp500": 5.879377752768219
+      },
+      {
+        "ticker": "NVDA",
+        "name": "Nvidia Corp",
+        "market_cap": 3287782500000.0,
+        "pct_of_mag7": 18.219310241553828,
+        "pct_of_sp500": 5.812870744738636
+      },
+      {
+        "ticker": "AMZN",
+        "name": "Amazon.Com Inc",
+        "market_cap": 2391744403879.68,
+        "pct_of_mag7": 13.25389782103412,
+        "pct_of_sp500": 4.228655963161962
+      },
+      {
+        "ticker": "GOOGL",
+        "name": "Alphabet Inc. Class A Common Stock",
+        "market_cap": 2323586620000.0,
+        "pct_of_mag7": 12.876200144901143,
+        "pct_of_sp500": 4.10815152348555
+      },
+      {
+        "ticker": "META",
+        "name": "Meta Platforms, Inc. Class A Common Stock",
+        "market_cap": 1566066461446.55,
+        "pct_of_mag7": 8.678387551484047,
+        "pct_of_sp500": 2.7688394588325136
+      },
+      {
+        "ticker": "TSLA",
+        "name": "Tesla, Inc. Common Stock",
+        "market_cap": 1400324325045.57,
+        "pct_of_mag7": 7.759924300588529,
+        "pct_of_sp500": 2.475803768103052
+      }
+    ]
+  },
+  "concentration_metrics": {
+    "total_mag7_market_cap": 18045592596043.32,
+    "sp500_total_market_cap": 56560392349612.24,
+    "mag7_pct_of_sp500": 31.904998969065733,
+    "collection_date": "2024-12-13",
+    "mag7_companies_count": 7
+  },
+  "sp500_details": {
+    "total_market_cap": 56560392349612.24,
+    "processed_count": 503,
+    "failed_count": 0,
+    "failed_tickers": []
+  }
+}

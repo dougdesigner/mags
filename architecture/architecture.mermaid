@@ -1,0 +1,64 @@
+flowchart TB
+    %% External Service
+    Polygon["Polygon.io API\n(Market Data)"]
+
+    subgraph Collection["Data Ingestion Layer"]
+        direction TB
+        CS[AWS CloudShell]
+        SF[AWS Step Functions]
+        LF[AWS Lambda]
+    end
+
+    subgraph Storage["Data Lake"]
+        direction TB
+        S3Raw[("Bronze Zone\n(Semi-structured JSON)\nRaw Data")]
+        S3Processed[("Silver Zone\n(Structured Parquet)\nCleansed & Conformed")]
+        S3Analytics[("Gold Zone\n(Structured Parquet)\nBusiness Ready")]
+    end
+
+    subgraph Processing["Data Processing Layer"]
+        direction TB
+        Glue[AWS Glue\nETL & Data Integration]
+        GlueCatalog[Glue Data Catalog\nMetadata Repository]
+    end
+
+    subgraph Analytics["Analytics Layer"]
+        direction TB
+        Athena[Amazon Athena\nServerless SQL Query]
+        Redshift[(Amazon Redshift\nData Warehouse)]
+        QuickSight[Amazon QuickSight\nBI & Visualization]
+    end
+
+    %% Data Collection Flow
+    CS -->|"1. Initialize pipeline"| SF
+    SF -->|"2. Schedule collection"| LF
+    LF -->|"3. REST API request"| Polygon
+    Polygon -->|"4. Semi-structured JSON"| LF
+    LF -->|"5. Land raw data"| S3Raw
+
+    %% Processing Flow
+    S3Raw -->|"6. Extract semi-structured data"| Glue
+    Glue -->|"7. Register schema definitions"| GlueCatalog
+    Glue -->|"8. Transform to structured parquet\n(partitioned by trading_date)"| S3Processed
+    Glue -->|"9. Transform to analytics-ready parquet\n(optimized for COPY)"| S3Analytics
+    S3Processed -->|"10. Automated metadata discovery"| GlueCatalog
+    GlueCatalog -->|"11. Schema & partition info"| Athena
+
+    %% Analytics Flow
+    S3Analytics -->|"12. COPY to staging tables"| Redshift
+    Athena -->|"13. Ad-hoc analysis results"| QuickSight
+    Redshift -->|"14. OLAP query results"| QuickSight
+    GlueCatalog -->|"15. Data catalog exploration"| QuickSight
+
+    %% Styling
+    classDef storage fill:#2496ED,stroke:#fff,stroke-width:2px,color:#fff
+    classDef collection fill:#FF9900,stroke:#fff,stroke-width:2px,color:#fff
+    classDef processing fill:#16A085,stroke:#fff,stroke-width:2px,color:#fff
+    classDef analytics fill:#8E44AD,stroke:#fff,stroke-width:2px,color:#fff
+    classDef external fill:#E74C3C,stroke:#fff,stroke-width:2px,color:#fff
+
+    class S3Raw,S3Processed,S3Analytics storage
+    class CS,SF,LF collection
+    class Glue,GlueCatalog processing
+    class Athena,Redshift,QuickSight analytics
+    class Polygon external

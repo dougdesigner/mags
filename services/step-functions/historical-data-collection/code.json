@@ -1,0 +1,37 @@
+{
+    "Comment": "Historical Data Collection Workflow",
+    "StartAt": "GenerateDates",
+    "States": {
+      "GenerateDates": {
+        "Type": "Task",
+        "Resource": "arn:aws:lambda:us-west-2:371484867872:function:trading-dates-generator",
+        "Next": "ProcessDates"
+      },
+      "ProcessDates": {
+        "Type": "Map",
+        "ItemsPath": "$.dates",
+        "MaxConcurrency": 10,
+        "Iterator": {
+          "StartAt": "CollectData",
+          "States": {
+            "CollectData": {
+              "Type": "Task",
+              "Resource": "arn:aws:lambda:us-west-2:371484867872:function:magnificent7-historical-data-collector",
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "States.TaskFailed"
+                  ],
+                  "IntervalSeconds": 120,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ],
+              "End": true
+            }
+          }
+        },
+        "End": true
+      }
+    }
+  }
