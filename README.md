@@ -1040,104 +1040,146 @@ These validation queries serve multiple purposes. They confirm the accuracy of o
 After confirming data quality, we can proceed with more detailed market analysis queries to examine trends in market concentration and individual company performance. These analytical queries will form the foundation for our visualization work in QuickSight and our more complex analyses in Redshift.
 
 
-#### Redshift Serverless Setup
-With serverless, you only pay for the compute time you actually use when querying your data, and AWS automatically handles all the scaling. This is particularly well-suited for your use case because you'll likely have periodic data loads (daily after market close) and occasional analytical queries, rather than constant, predictable workloads that would justify a provisioned cluster. The advantage of using Parquet files is that they're optimized for analytics and more efficient to load than our original JSON files.
+### Amazon Redshift Serverless Data Warehouse
 
-Let me walk you through creating a Redshift serverless workspace step by step. A workspace in Redshift serverless is where your data and compute resources live
+Amazon Redshift Serverless provides an ideal solution for our market analysis workload, offering on-demand compute capacity that automatically scales based on demand. This serverless approach aligns well with our daily data ingestion pattern and intermittent analytical querying needs while optimizing costs by charging only for actual compute usage.
 
+#### Creating the Serverless Workspace
+Begin by accessing the Amazon Redshift console through the AWS Management Console. Navigate to the Serverless dashboard to initiate the workspace creation process.
 
-First, navigate to Redshift in the AWS Console:
+Create a new serverless workspace with these fundamental settings:
 
-Open the AWS Management Console
-Search for "Redshift" in the search bar
-Click on "Amazon Redshift"
+**Workspace Configuration**
+- Workspace Name: market-analysis
+- Namespace Name: market-analysis
+- Enhanced VPC Routing: Disabled
+- Encryption: AWS owned key
 
+**Network Architecture**
 
-Start the serverless setup:
+Establish the networking foundation for your workspace:
+- Select or create a VPC for secure data access
+- Choose a minimum of two subnets across different Availability Zones for high availability
+- Configure VPC security groups to control network access
+- Implement IAM authentication for secure database access management
 
-Look for "Serverless dashboard" in the left navigation
-Click "Create serverless workspace"
+**Resource Management**
 
+Configure compute and cost parameters to balance performance with efficiency:
+- Base Capacity: 8 RPUs (Redshift Processing Units)
+- Maximum RPU Capacity: 64 RPUs
+- Enable cost control mechanisms
+- Set a conservative daily cost limit of $50 to prevent unexpected charges
 
-Configure basic workspace settings:
-
-Name your workspace (e.g., "market-analysis")
-In the namespace name field, enter a similar name (namespaces help organize resources)
-Leave "Turn on Enhanced VPC routing" unchecked for now
-For the security and encryption section, choose "AWS owned key" for simplicity
-
-
-For network and security:
-
-Either choose an existing VPC or let AWS create a new one
-For subnet selection, choose two or more subnets in different availability zones for reliability
-Under "VPC security group", either select an existing one or create new
-For database authentication, choose "AWS Identity and Access Management (IAM)"
-
-
-Configure your limits and cost controls:
-
-Base capacity: Start with 8 RPUs (Redshift Processing Units)
-Maximum RPU capacity: Set to 64 (you can adjust this later based on usage)
-For cost control, enable "Turn on cost control"
-Set a daily cost limit (e.g., start with $50 to be safe)
+The workspace creation process typically requires 5-10 minutes to complete. During this time, Redshift provisions the necessary resources and establishes the required networking configurations.
 
 
-Review and create:
+#### Amazon Redshift IAM Permission Configuration
 
-Review all settings
-Click "Create workspace"
+Amazon Redshift requires specific IAM permissions to access data stored in our S3 bucket. We'll create and configure an IAM role that grants Redshift the necessary access while adhering to security best practices and the principle of least privilege.
 
-After creation (which takes about 5-10 minutes), we'll need to:
+First, create a new IAM role specifically for Redshift S3 access. Navigate to the IAM console and follow these implementation steps to establish the required permissions:
 
-Set up permissions for Zero-ETL integration with S3
-Design your table schema for the market data
-Configure the data transfer from S3
+Create an IAM role with Redshift as the trusted entity. This role will use a trust policy that explicitly permits Redshift to assume the role during data loading operations. The trust policy should specify:
 
-#### Setup Redshift permissions
-Configure IAM roles and policies to allow Redshift to read from your S3 bucket
+```json
+{
+   "Version": "2012-10-17",
+   "Statement": [
+       {
+           "Effect": "Allow",
+           "Principal": {
+               "Service": "redshift.amazonaws.com"
+           },
+           "Action": "sts:AssumeRole"
+       }
+   ]
+}
+```
+
+After establishing the trust relationship, attach a permission policy that grants access to our S3 bucket. This policy should provide the minimum required permissions for Redshift to read our market data files:
 
 
-#### Schema and Table Creation
-Let's design a schema adn tables that effectively matches the schema we defined in Glue.
-We're using a dedicated schema market_data to organize our tables logically
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "s3:GetObject",
+                "s3:GetBucketLocation",
+                "s3:ListBucket"
+            ],
+            "Resource": [
+                "arn:aws:s3:::magnificent7-market-data",
+                "arn:aws:s3:::magnificent7-market-data/*"
+            ]
+        }
+    ]
+}
+```
 
-First, let's access the query editor:
+After creating the IAM role, associate it with your Redshift serverless workspace. This integration enables Redshift to securely access the data files in our S3 bucket while maintaining proper access controls and security boundaries.
 
-In the Redshift console, look at the left navigation pane
-Click on "Query editor v2" (this is Redshift's modern SQL workspace)
-Select your serverless workspace that we created earlier
-You may need to authenticate - choose "Federated user login" if using your AWS console credentials
+#### Schema and Table Creation in Redshift
 
-Once you're in the query editor, you'll see a blank workspace where we can write and execute our SQL. Let's break down the schema creation into logical steps and execute them one at a time so we can verify each step succeeds:
+We'll implement a dedicated schema structure in Redshift that mirrors our Glue Data Catalog configuration. This approach ensures consistency across our analytics platform while optimizing for Redshift's specific performance characteristics.
 
-* Create Schema
+#### Accessing the Query Environment
+
+Begin by navigating to Query Editor v2 through the Redshift console. This modern SQL workspace provides the tools we need to implement our schema and tables:
+
+1. Navigate to the Redshift console
+2. Select "Query editor v2" from the left navigation panel
+3. Connect to your serverless workspace
+4. Authenticate using Federated user login if prompted
+
+#### Creating the Base Schema
+
+First, establish the foundational schema that will contain our market data tables. Execute this command in the query editor:
+
 ```sql
--- First create a dedicated schema for our market data
 CREATE SCHEMA market_data;
 ```
-Click "Run" or press Ctrl+Enter (Cmd+Enter on Mac) to execute this command. You should see a success message.
+After executing this command, verify the successful creation through the success message in the query results panel.
 
-Now we can create each table one by one. This methodical approach helps us catch any potential issues early. Let's start with the trading_dates table:
+#### Implementing Table Structures in Redshift
 
-* Create tables matching the Glue schema and folder structure. 
-    - We'll use DISTKEY and SORTKEY on trading_date since this is our main temporal dimension and most queries will likely filter or join on this column.
-    - Open a Notebook and write it Create table command in it's own cell.
+The table creation process follows a methodical approach, implementing structures that align with our Glue schema while optimizing for Redshift's specific performance characteristics. Each table's design incorporates distribution and sort key strategies that enhance query performance for our market analysis workload.
+
+#### Design Principles
+
+Our table designs follow several key principles:
+1. Distribution keys based on trading_date enable efficient parallel processing
+2. Sort keys facilitate rapid data retrieval for time-series analysis
+3. Data types and precision settings balance accuracy with storage efficiency
+4. Primary keys maintain data integrity where appropriate
+
+#### Table Implementations
+
+Let's examine each table's structure and purpose:
+
+**Company Details Table**
+This table maintains point-in-time snapshots of company information:
 ```sql
--- Company details table for point-in-time snapshots
 CREATE TABLE market_data.company_details (
-    trading_date DATE,
-    ticker VARCHAR(10),
-    company_name VARCHAR(255),
-    market_cap NUMERIC(20,2),
-    shares_outstanding NUMERIC(20,2),
-    currency VARCHAR(3),
-    description TEXT,
-    PRIMARY KEY (trading_date, ticker)
+   trading_date DATE,
+   ticker VARCHAR(10),
+   company_name VARCHAR(255),
+   market_cap NUMERIC(20,2),
+   shares_outstanding NUMERIC(20,2),
+   currency VARCHAR(3),
+   description TEXT,
+   PRIMARY KEY (trading_date, ticker)
 )
 DISTKEY(trading_date)
 COMPOUND SORTKEY(trading_date, ticker);
+```
 
+**Daily Trading Table**
+This structure captures daily market activity metrics:
+```sql
 -- Daily trading data for each company
 CREATE TABLE market_data.daily_trading (
     trading_date DATE,
@@ -1151,8 +1193,11 @@ CREATE TABLE market_data.daily_trading (
 )
 DISTKEY(trading_date)
 COMPOUND SORTKEY(trading_date, ticker);
+```
 
-
+**Magnificent 7 Metrics Table**
+This specialized table tracks key metrics for our focus companies:
+```sql
 -- Magnificent 7 specific metrics
 CREATE TABLE market_data.magnificent7_metrics (
     trading_date DATE,
@@ -1164,7 +1209,11 @@ CREATE TABLE market_data.magnificent7_metrics (
 )
 DISTKEY(trading_date)
 COMPOUND SORTKEY(trading_date, ticker);
+```
 
+**Concentration Metrics Table**
+This table provides market-wide concentration analysis:
+```sql
 -- Daily market concentration metrics
 CREATE TABLE market_data.concentration_metrics (
     trading_date DATE,
@@ -1175,7 +1224,11 @@ CREATE TABLE market_data.concentration_metrics (
 )
 DISTKEY(trading_date)
 SORTKEY(trading_date);
+```
 
+**Failed Collections Table**
+This monitoring table tracks data quality issues:
+```sql
 -- Failed collections tracking for monitoring
 CREATE TABLE market_data.failed_collections (
     trading_date DATE,
@@ -1186,19 +1239,12 @@ DISTKEY(trading_date)
 SORTKEY(trading_date);
 ```
 
-After each successful table creation, you'll see a confirmation message. You can verify the table was created by looking at the schema browser on the left side of the query editor - expand the market_data schema and you should see your new table.
+#### Table Purpose and Relationships
+Each table serves a distinct analytical purpose while maintaining relationships through common dimensions:
 
-Each table has a clear purpose:
+The company_details table provides foundational company information, serving as a reference point for daily metrics and analysis. The daily_trading table captures market activity metrics, enabling detailed price and volume analysis. The magnificent7_metrics table focuses specifically on our key companies, while the concentration_metrics table provides market-wide perspective. The failed_collections table supports data quality monitoring and maintenance.
 
-trading_dates: Tracks all collection dates and overall statistics
-company_details: Point-in-time company information
-daily_trading: Daily price and volume data
-magnificent7_metrics: Specific metrics for the Mag 7 companies
-concentration_metrics: Daily market concentration analysis
-failed_collections: Error tracking for data quality monitoring
-
-
-
+After creating each table, verify its successful creation through the schema browser in the query editor. The table should appear under the market_data schema with the specified structure. This verification ensures our foundation is properly established before proceeding with data loading operations.
 
 #### S3 Event Integration
 * S3 event integration setup
