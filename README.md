@@ -135,7 +135,7 @@ The platform implements a serverless event-driven architecture that collects, pr
 
 ## Prerequisites
 
-### Administrative Access
+### AWS Account with Administrative Access
 This project was created in an AWS Root Account with administrative access. Ensure you have administrative access to the services described in the Service Architecture. Resource policies as well as user and service IAM roles may need to be modified for not root users.
 
 ### Supported Region
@@ -145,6 +145,8 @@ Reference: [QuickSight Supported Regions](https://docs.aws.amazon.com/quicksight
 
 ### Polygon.io API Setup
 This project requires a Polygon.io Stocks Starter subscription for market data collection. Each Lambda function makes 500+ API calls per trading day, exceeding the Basic tier's 5 calls/minute limit.
+
+![Polygon.io](images/polygon.png)
 
 #### Setup Steps
 1. Create account: [Polygon.io Signup](https://polygon.io/dashboard/signup)
@@ -163,8 +165,10 @@ _eaBY7FrBg2jiHB2PM63CY7HUgyQLtLf
 ### S&P 500 Constituent Data Collection
 The analysis compares Magnificent 7 market caps against the S&P 500 index. Since S&P Dow Jones Indices data is proprietary, we use BlackRock's IVV ETF holdings (December 12th, 2024) as our constituent data source. While the constituents of the S&P 500 are always changing, we will use this point in time holdings data to simplify our analysis.
 
+![IVV ETF Holdings](images/ivv.png)
+
 #### Data Source
-For ETF details and documentation: [IVV ETF Overview](https://www.ishares.com/us/products/239726/ishares-core-sp-500-etf)
+For IVV ETF details and documentation: [IVV ETF Overview](https://www.ishares.com/us/products/239726/ishares-core-sp-500-etf)
 
 Detailed Holdings and Analytics: [IVV Holdings CSV](https://www.ishares.com/us/products/239726/ishares-core-sp-500-etf/1467271812596.ajax?fileType=csv&fileName=IVV_holdings&dataType=fund)  
 
@@ -189,6 +193,8 @@ Ticker,Name,Sector,Asset Class,Market Value,Weight (%),Notional Value,Quantity,P
 
 ### Data Preparation with CloudShell
 Use AWS CloudShell to extract equity ticker symbols from `IVV_holdings.csv` using Python. This ensures accurate data handling by removing non-equity holdings and extraneous data through automation. CloudShell provides a pre-configured environment with AWS CLI and Python, eliminating setup requirements and ensuring consistent execution.
+
+![AWS Cloudshell](images/cloudshell.png)
 
 #### Steps to run the data cleaning script in AWS CloudShell
 1. **Upload the CSV file**
@@ -242,7 +248,9 @@ Use AWS CloudShell to extract equity ticker symbols from `IVV_holdings.csv` usin
 Note: We will use the `tickers_array.py` code in our data collection Lambda function.
 
 ### Data Lake Implementation with Amazon S3
-S3 bucket needs to store historical stock data, requiring a structure that supports efficient querying and maintains data organization. Here's a detailed walkthrough:
+S3 bucket needs to store historical stock data, requiring a structure that supports efficient querying and maintains data organization. Here's a detailed walkthrough.
+
+![Amazon S3](images/s3.png)
 
 1. S3 Bucket Creation
     - Go to **S3** in the AWS Console. Make sure you are in the QuickSight supported region you choose earlier.
@@ -277,7 +285,7 @@ S3 bucket needs to store historical stock data, requiring a structure that suppo
     - Click "Edit" and paste the following policy to allow access from any authenticated service within your AWS account.
     ```json
     {
-        "Version": "20-10-17",
+        "Version": "2012-10-17",
         "Statement": [
             {
                 "Sid": "AllowAWSServiceAccess",
@@ -307,6 +315,8 @@ S3 bucket needs to store historical stock data, requiring a structure that suppo
 
 ### Historical Data Collection with AWS Lambda
 The data collection process is implemented using two AWS Lambda functions: one to collect market data and another to generate trading dates.
+
+![AWS Lambda](images/lambda.png)
 
 #### Market Data Collector Lambda Function
 The Market Data Collector function serves as the core component of our data pipeline, retrieving and processing daily market data from Polygon.io. The function implements a stateless architecture, processing one trading day per execution to ensure reliability and simplify error handling.
@@ -402,7 +412,7 @@ s3://magnificent7-market-data/
     ```bash
     mkdir python
     ```
-    - Run the following script to install the dependencies.
+    - Run the following script to install the dependencies. If you get an error you can ignore it. We won't be utilizing the libraries within Cloudshell.
     ```bash
     pip3 install polygon-api-client pandas-market-calendars -t python/
     ```
@@ -411,6 +421,9 @@ s3://magnificent7-market-data/
     zip -r python.zip python/
     ```
     - Use the **"Download File"** option in CloudShell to download the [python.zip](services/lambda/magnificent7-historical-data-collector/layer/python.zip) file to your local machine.
+
+    ![Cloudshell](images/python.png)
+
     - In Lambda console, go to "Layers".
     - Click "Create layer".
     - Name the layer and upload the zipped file.
@@ -425,6 +438,9 @@ s3://magnificent7-market-data/
 6. **Add Lambda function code**
     - Click on the **"Code"** tab below the **"Function overview"**.
     - In **"Code source"** add the code from `magnificent7-historical-data-collector/lambda_function.py`
+
+    ![Lambda](images/code.png)
+
     - Click **"Deploy"** to save the function.
 
 #### Steps to test historical data collection
@@ -440,6 +456,9 @@ s3://magnificent7-market-data/
     - Monitor the editor "OUTPUT" for a "Status: Succeeded" to ensure that there were no errors in your function code.
     - Navigate to your S3 bucket "magnificent7-market-data".
     - Look for path: raw/magnificent7/trading_date=YYYY-MM-DD/market_data.json
+
+    ![S3](images/json.png)
+
     - Open the `market_data.json` file and validate that the data matches the intented structure and is complete. Compare it to [data/market_data.json](data/market_data.json).
 
 [market_data.json](data/market_data.json)
@@ -464,6 +483,7 @@ The function organizes collected data into a hierarchical JSON structure that fa
 ### Trading Date Generator Lambda Function
 The Trading Date Generator function creates lists of valid market trading dates, serving as a critical component for orchestrating historical data collection. This function can generate either a complete trading history for the past four years or a specific date range as needed.
 
+![Lambda](images/dates.png)
 
 ##### Implementation Steps
 1. **Create the Lambda Function**
@@ -504,6 +524,8 @@ The Trading Date Generator function creates lists of valid market trading dates,
 
 AWS Step Functions provides the orchestration layer for our historical data collection pipeline, managing the execution flow between our Lambda functions. This serverless workflow engine ensures reliable data collection across extended time periods while providing robust error handling and execution visibility.
 
+![Step Functions](images/steps.png)
+
 #### Core Architecture Components
 A Step Functions state machine coordinates the workflow through two key Lambda functions:
 
@@ -522,7 +544,8 @@ To create the state machine that orchestrates our data collection workflow, foll
    - Select "Standard" for the state machine type
 
 2. Define the State Machine Logic
-    Copy the following state machine defintion.
+   
+    - Copy the following state machine defintion into the code editor, then save the state machine.
 
     [historical-data-collection/code.json](services/step-functions/historical-data-collection/code.json)
     ```json
@@ -588,6 +611,8 @@ Navigate to the AWS Step Functions console and select your "historical-data-coll
 #### Monitoring the Execution
 The Step Functions console provides a visual representation of your workflow execution. The process unfolds in several stages:
 
+![Step Functions](images/execute.png)
+
 First, the date generator Lambda function executes, producing a list of valid trading dates. You'll see this represented in the "GenerateTradingDates" state, typically completing within seconds.
 
 Next, the "ProcessTradingDates" Map state begins processing the date list. With the MaxConcurrency parameter set to 10, the workflow processes ten dates simultaneously. The console displays a progress indicator showing the percentage of completed executions.
@@ -637,7 +662,7 @@ To implement the recovery workflow:
         "ItemsPath": "$.dates",
         "MaxConcurrency": 10,
     ```
-3. Provide the specific date range where data collection needs to be repeated
+3. Provide the specific date range where data collection needs to be repeated in the lambda function code.
 
 This recovery mechanism ensures you can efficiently address any gaps in your historical data collection without reprocessing the entire date range.
 
@@ -646,6 +671,8 @@ This recovery mechanism ensures you can efficiently address any gaps in your his
 ### AWS Glue Data Catalog Configuration
 
 The processing pipeline leverages AWS Glue to transform our raw JSON market data into optimized formats for both analysis and storage. This approach creates two distinct data paths: one optimized for Athena queries through partitioned Parquet files, and another designed for efficient Redshift loading using unpartitioned Parquet files.
+
+![AWS Glue](images/studio.png)
 
 #### Data Transformation Strategy
 
@@ -692,6 +719,8 @@ The use of AWS Glue as our transformation engine provides robust error handling 
 
 The AWS Glue Data Catalog serves as a central metadata repository for our market data assets. Creating a dedicated database in the Data Catalog establishes an organized foundation for our data processing pipeline. The database will store table definitions and schemas that our ETL jobs will populate.
 
+![AWS Glue](images/db.png)
+
 #### Database Creation Process
 
 1. Navigate to the AWS Glue console and locate the Data Catalog section in the left navigation panel. 
@@ -714,6 +743,7 @@ Our ETL job will create these table definitions dynamically during its first run
 
 The ETL job transforms our raw JSON market data into optimized Parquet files while maintaining data integrity and relationships. We'll use Glue's visual interface to configure the transformation pipeline, implementing SQL-based transformations for each target table. Our data processing strategy requires two separate ETL jobs to optimize data for different analytical use cases. We'll create a processing pipeline for Athena queries and an analytics pipeline for Redshift integration.
 
+![AWS Glue](images/pipe.png)
 
 #### Creating the ETL Jobs
 
@@ -970,6 +1000,10 @@ s3://magnificent7-market-data/processed/[table_name]/trading_date=[YYYY-MM-DD]/[
 
 This structure enables Athena to leverage partition pruning for efficient query execution. Each partition should contain properly formatted Parquet files with Snappy compression.
 
+Verify that your database in AWS Glue now has been populated with tables for each table we defined in the ETL job.
+
+![AWS Glue](images/tables.png)
+
 #### Data Quality Verification
 
 With our file structures confirmed, we can proceed to validate the data quality using Athena. This will allow us to:
@@ -977,7 +1011,6 @@ With our file structures confirmed, we can proceed to validate the data quality 
 - Confirm the data types are correctly mapped
 - Verify the completeness of our dataset across all trading dates
 - Ensure our transformations maintained data accuracy
-- Validate the relationships between our different tables
 
 The next section will cover the specific Athena queries we'll use to perform these validation checks, ensuring our data is ready for both ad-hoc analysis and data warehouse integration.
 
@@ -988,6 +1021,8 @@ The next section will cover the specific Athena queries we'll use to perform the
 After populating our Data Catalog through the Glue ETL process, we can use Amazon Athena to validate our data transformation and begin exploring market concentration patterns. Examine the dataset through a series of analytical queries that verify data quality and reveal market insights.
 
 First, navigate to the Amazon Athena console and select the `market_data` database from the catalog. The schema browser should display our five core tables: concentration_metrics, company_details, daily_trading, magnificent7_metrics, and failed_collections.
+
+![Amazon Athena](images/athena.png)
 
 #### Data Completeness Verification
 
@@ -1045,6 +1080,8 @@ After confirming data quality, we can proceed with more detailed market analysis
 
 Amazon Redshift Serverless provides an ideal solution for our market analysis workload, offering on-demand compute capacity that automatically scales based on demand. This serverless approach aligns well with our daily data ingestion pattern and intermittent analytical querying needs while optimizing costs by charging only for actual compute usage.
 
+![Amazon Redshift Serverless](images/redshift.png)
+
 #### Creating the Serverless Workspace
 Begin by accessing the Amazon Redshift console through the AWS Management Console. Navigate to the Serverless dashboard to initiate the workspace creation process.
 
@@ -1071,6 +1108,9 @@ Configure compute and cost parameters to balance performance with efficiency:
 - Maximum RPU Capacity: 64 RPUs
 - Enable cost control mechanisms
 - Set a conservative daily cost limit of $50 to prevent unexpected charges
+
+![Amazon Redshift Serverless](images/namespace.png)
+
 
 The workspace creation process typically requires 5-10 minutes to complete. During this time, Redshift provisions the necessary resources and establishes the required networking configurations.
 
@@ -1123,11 +1163,17 @@ After establishing the trust relationship, attach a permission policy that grant
 
 After creating the IAM role, associate it with your Redshift serverless workspace. This integration enables Redshift to securely access the data files in our S3 bucket while maintaining proper access controls and security boundaries.
 
-#### Schema and Table Creation in Redshift
+Note: We will need to save the ARN for this IAM role for use in our auto copy jobs. You can save it now and store it, you can also find it in your Namespace under the Security and encryption tab.
+
+#### Redshift Query Editor v2
+
+Amazon Redshift Query Editor v2 is a modern, web-based SQL client that enables you to write and execute queries, visualize results, and collaborate with team members directly from your browser. With features like auto-complete, syntax highlighting, and the ability to save and share queries, it provides a comprehensive environment for developing and refining our analytical queries.
 
 We'll implement a dedicated schema structure in Redshift that mirrors our Glue Data Catalog configuration. This approach ensures consistency across our analytics platform while optimizing for Redshift's specific performance characteristics.
 
-#### Accessing the Query Environment
+![Redshift Query Editor v2](images/editor.png)
+
+#### Schema and Table Creation in Query Environment
 
 Begin by navigating to Query Editor v2 through the Redshift console. This modern SQL workspace provides the tools we need to implement our schema and tables:
 
@@ -1150,6 +1196,8 @@ After executing this command, verify the successful creation through the success
 
 The table creation process follows a methodical approach, implementing structures that align with our Glue schema while optimizing for Redshift's specific performance characteristics. Each table's design incorporates distribution and sort key strategies that enhance query performance for our market analysis workload.
 
+![Redshift Query Editor v2](images/creat-tables.png)
+
 #### Design Principles
 
 Our table designs follow several key principles:
@@ -1162,8 +1210,8 @@ Our table designs follow several key principles:
 
 Next we define each table's structure to match our analytics pipeline structure. You can access the table defintions at [table_definitions.ipynb](services/redshift/table_definitions.ipynb) or you can copy the SQL queries below:
 
-**Company Details Table**
-This table maintains point-in-time snapshots of company information:
+1. Company Details Table
+    - This table maintains point-in-time snapshots of company information:
 ```sql
 CREATE TABLE market_data.company_details (
    trading_date DATE,
@@ -1246,7 +1294,7 @@ Each table serves a distinct analytical purpose while maintaining relationships 
 
 The company_details table provides foundational company information, serving as a reference point for daily metrics and analysis. The daily_trading table captures market activity metrics, enabling detailed price and volume analysis. The magnificent7_metrics table focuses specifically on our key companies, while the concentration_metrics table provides market-wide perspective. The failed_collections table supports data quality monitoring and maintenance.
 
-After creating each table by running the script, verify its successful creation through the schema browser in the query editor. The table should appear under the market_data schema with the specified structure. This verification ensures our foundation is properly established before proceeding with data loading operations.
+After creating each table by running the script, verify its successful creation through the schema browser in the query editor. The tables should appear under the Serverless: market_analytics > natvie database > dev> market_data > Tables. This verification ensures our foundation is properly established before proceeding with data loading operations.
 
 #### S3 Event Integration Configuration
 
@@ -1254,23 +1302,28 @@ Amazon Redshift's S3 event integration enables automatic data ingestion from our
 
 Begin by accessing the S3 event integrations section within the Amazon Redshift console. This configuration establishes an automated connection between our S3 data source and Redshift workspace.
 
-#### Integration Details Configuration
+![Redshift Serverless](images/event.png)
+
+#### Integration Details
 
 When creating the S3 event integration, provide clear identifying information that documents the integration's purpose and scope. Enter the following details:
 
-For the integration name, use "market-data-s3-integration". This naming convention clearly identifies both the data type and integration purpose, making it easily recognizable for future maintenance and troubleshooting.
-
-Include a comprehensive description: "Automatic ingestion of daily market data from S3 to Redshift for Magnificent 7 and S&P 500 analysis". This description provides context for other team members who may need to understand or manage the integration.
+```yaml
+Integration name: market-data-s3-integration
+Description: Automatic ingestion of daily market data from S3 to Redshift for Magnificent 7 and S&P 500 analysis
+```
 
 #### S3 Source and Redshift Serverless Target Configuration
 
 The integration requires proper configuration of both the source data location and target Redshift environment. Configure these settings as follows:
 
 1. Source configuration
-Select the S3 bucket containing your market data. This should be the bucket receiving output from your Lambda analytics pipeline `s3://magnificent7-market-data/analytics/`.
+Select the S3 bucket containing your market data. This should be the bucket receiving output from your Lambda analytics pipeline `s3://magnificent7-market-data/`.
 
 2. Target configuration
-Select your newly created Redshift serverless workspace. If prompted with a "Fix it for me" option for permissions, select it to automatically configure the necessary IAM permissions between S3 and Redshift.
+Select your newly created Redshift data warehouse `market-analysis`. If prompted with a "Fix it for me" option for permissions, select it to automatically configure the necessary IAM permissions between S3 and Redshift.
+
+![Redshift Query Editor v2](images/i9n.png)
 
 This integration establishes the foundation for automated data loading from S3 to Redshift, enabling efficient and timely updates to your market analysis data warehouse. The next section will cover the configuration of automated COPY commands to load data into your Redshift tables.
 
@@ -1279,6 +1332,8 @@ This integration establishes the foundation for automated data loading from S3 t
 
 The final step in our data pipeline configuration involves setting up automated COPY jobs to load data from S3 into our Redshift tables. We'll implement these jobs systematically, verifying functionality at each step to ensure reliable data loading.
 
+![Redshift Query Editor v2](images/copy.png)
+
 Begin by accessing the Query Editor v2 in the Redshift console and connecting to your serverless workspace. We'll start with implementing COPY jobs for our core metrics tables. You can copy the following commands or open the [copy_jobs.ipynb](services/redshift/copy_jobs.ipynb) in the Redshift Query Editor v2.
 
 First, establish the concentration metrics loading process:
@@ -1286,7 +1341,7 @@ First, establish the concentration metrics loading process:
 ```sql
 COPY market_data.concentration_metrics
 FROM 's3://magnificent7-market-data/analytics/concentration_metrics/'
-IAM_ROLE default
+IAM_ROLE 'arn:aws:iam::ACCOUNT-ID:role/RedshiftS3ZeroETLRole'
 FORMAT PARQUET
 JOB CREATE concentration_metrics_load
 AUTO ON;
@@ -1296,7 +1351,7 @@ Next, implement the company details loading process:
 ```sql
 COPY market_data.company_details
 FROM 's3://magnificent7-market-data/analytics/company_details/'
-IAM_ROLE default
+IAM_ROLE 'arn:aws:iam::ACCOUNT-ID:role/RedshiftS3ZeroETLRole'
 FORMAT PARQUET
 JOB CREATE company_details_load
 AUTO ON;
@@ -1305,7 +1360,7 @@ AUTO ON;
 #### Validation of Initial Implementation
 After creating these initial jobs, verify their proper operation using the system copy job view:
 ```sql
-SELECT * FROM sys_copy_job 
+SELECT * FROM SYS_COPY_JOB_INFO
 WHERE job_name IN ('concentration_metrics_load', 'company_details_load')
 ORDER BY job_name;
 ```
@@ -1317,7 +1372,7 @@ For the Magnificent 7 metrics:
 ```sql
 COPY market_data.magnificent7_metrics
 FROM 's3://magnificent7-market-data/analytics/magnificent7_metrics/'
-IAM_ROLE default
+IAM_ROLE 'arn:aws:iam::ACCOUNT-ID:role/RedshiftS3ZeroETLRole'
 FORMAT PARQUET
 JOB CREATE magnificent7_metrics_load
 AUTO ON;
@@ -1327,7 +1382,7 @@ For tracking failed collections:
 ```sql
 COPY market_data.failed_collections
 FROM 's3://magnificent7-market-data/analytics/failed_collections/'
-IAM_ROLE default
+IAM_ROLE arn:aws:iam::ACCOUNT-ID:role/RedshiftS3ZeroETLRole
 FORMAT PARQUET
 JOB CREATE failed_collections_load
 AUTO ON;
@@ -1337,7 +1392,7 @@ For daily trading data:
 ```sql
 COPY market_data.daily_trading
 FROM 's3://magnificent7-market-data/analytics/daily_trading/'
-IAM_ROLE default
+IAM_ROLE arn:aws:iam::ACCOUNT-ID:role/RedshiftS3ZeroETLRole
 FORMAT PARQUET
 JOB CREATE daily_trading_load
 AUTO ON;
@@ -1458,6 +1513,8 @@ The visualization capabilities within Query Editor v2 provide immediate insights
 ### QuickSight Business Intelligance
 Amazon QuickSight is AWS's cloud-native business intelligence service that enables organizations to create and share interactive dashboards, perform ad-hoc analysis, and derive meaningful insights from their data. As a fully managed service, QuickSight eliminates the need for complex data visualization infrastructure while providing powerful analytical capabilities through an intuitive interface.
 
+![QuickSight](images/quick.png)
+
 For our market concentration analysis, QuickSight offers several key advantages. Its direct integration with AWS services like Athena and the Glue Data Catalog allows us to visualize our market data without additional data movement or transformation. The service's in-memory computation engine, SPICE (Super-fast, Parallel, In-memory Calculation Engine), enables rapid analysis of large datasets while maintaining cost efficiency through pay-per-use pricing.
 
 #### Security and Permissions Setup
@@ -1480,45 +1537,48 @@ Begin by creating the dataset that tracks overall market concentration:
 1. Navigate to the Datasets section
 2. Select "New dataset" and choose Athena as the data source
 3. Configure the connection:
-  - Name: "magnificent7-analytics"
+  - Data source name: "magnificent7-analytics"
   - Workgroup: Select your Athena workgroup
   - Database: "market_data"
 4. Select the concentration_metrics table
-5. Choose "Use in analysis"
-6. Name the dataset "Concentration Metrics"
+5. Select "Directly query your data" and then click "Visualize"
+6. Create a new sheet.
+6. Name the analysis "Concentration Metrics"
 
 #### Company Details Dataset
 Create a dataset for fundamental company information:
 
 1. Follow the same initial configuration steps
 2. Select the company_details table
-3. Name it "Company Details"
+3. Name the analysis "Company Details"
 4. This dataset will provide context for market movements and company-specific analysis
 
 #### Daily Trading Dataset
 Establish the dataset for detailed trading information:
 
 1. Select the daily_trading table
-2. Name it "Daily Trading"
+2. Name the analysis "Daily Trading"
 3. This will serve as the foundation for price and volume analysis
 
 #### Magnificent 7 Metrics Dataset
 Configure the dataset specific to our focus companies:
 
 1. Select the magnificent7_metrics table
-2. Name it "Magnificent 7 Metrics"
+2. Name the analysis "Magnificent 7 Metrics"
 3. This dataset will track relative performance and market share metrics
 
 #### Failed Collections Dataset
 Create a dataset for monitoring data quality:
 
 1. Select the failed_collections table
-2. Name it "Failed Collections"
+2. Name the analysis "Failed Collections"
 3. This will help maintain data integrity and track collection completeness
 
 #### Field Configuration and Time-Based Analysis Setup
 
 Before creating visualizations, we must properly configure our dataset fields to enable QuickSight's full range of time-based analysis capabilities. The trading_date field requires specific formatting to support temporal analysis across our market concentration metrics.
+
+![QuickSight](images/prep.png)
 
 Each dataset requires configuration of the trading_date field to ensure proper temporal analysis. Begin with the Concentration Metrics dataset and proceed systematically through each dataset:
 
@@ -1534,7 +1594,7 @@ Each dataset requires configuration of the trading_date field to ensure proper t
   - Navigate to the Data type section
   - Change the type from "String" to "Date"
 
-4. Specify the date format as "YYYY-MM-DD" to match our data structure. QuickSight will validate the format against existing data to ensure compatibility.
+4. Specify the date format as "yyyy-MM-dd" to match our data structure. This format is case sensitive, if you input "YYYY-MM-DD" you will not be able to query all your data. QuickSight will validate the format against existing data to ensure compatibility.
 
 5. Apply and save the changes:
   - Confirm the date type conversion
@@ -1550,174 +1610,54 @@ This configuration process must be repeated for each of our market analysis data
 
 Maintaining consistent date formatting across all datasets ensures seamless integration when creating cross-dataset visualizations and analyses.
 
-#### Time-Based Analysis Capabilities
-
-This date field configuration enables sophisticated temporal analysis features within QuickSight:
-
-Time-Based Visualizations: Create trend lines and temporal patterns showing market concentration evolution over specific periods.
-
-Date Filtering Options: Implement dynamic date ranges such as trailing 30-day periods or year-to-date analysis of market movements.
-
-Comparative Analysis: Perform year-over-year comparisons of market concentration levels and company-specific metrics.
-
-Temporal Aggregation: Group and analyze data across various time periods, from daily patterns to quarterly trends.
-
-By properly configuring these date fields, we establish the foundation for comprehensive temporal analysis of market concentration patterns. The next section will detail the creation of specific visualizations leveraging these enhanced time-based capabilities.
-
-Each dataset loads independently, which means faster data refreshes. You can create analysis-specific joins within visualizations using dataset relationships. QuickSight recognizes common fields (like trading_date and ticker) across datasets. You can choose different join types for different visualizations.
-
-
-#### Visualization Strategy and Implementation
+#### Market Concentration Analysis Visualizations
 
 QuickSight enables us to create comprehensive visualizations that reveal key insights about market concentration patterns and company performance metrics.
-
-1. Market Concentration Analysis Visualizations
+ 
 The concentration metrics dataset provides insights into overall market dynamics and the growing influence of the Magnificent 7 companies. We can implement several key visualizations to track these trends:
 
-2. Market Capitalization Trend Analysis
-Create a dual-line chart displaying both S&P 500 and Magnificent 7 market capitalizations over time. This visualization reveals the relationship between overall market growth and the increasing dominance of our focus companies. The chart should include:
 
-A primary line tracking total S&P 500 market capitalization, providing context for overall market movements. A secondary line showing Magnificent 7 total market capitalization helps illustrate their growing market presence and influence on broader market trends.
+1. Market Capitalization Trend Analysis
+- A stacked area chart displaying both S&P 500 and Magnificent 7 market capitalizations over time. This visualization reveals the relationship between overall market growth and the increasing dominance of our focus companies. Since this is a stacked visualizaiton, I had to use a calculated field of the S&P 500 market cap minus the Magnificent 7 market cap. We can observe that the slop of growth for the Magnificent 7 in the last year has been higher than that of the S&P 493.
 
-3. Concentration Percentage Visualization
-Develop an area chart showing the Magnificent 7's percentage of total S&P 500 market capitalization. This visualization effectively demonstrates concentration trends by:
+![QuickSight](images/trend.png)
 
-Creating a filled area representing the concentration percentage over time. Adding reference lines at significant thresholds, such as 30%, highlights important milestones in market concentration. The visual impact of the filled area emphasizes periods of increasing or decreasing concentration.
+- A similar chart using the same data but showing the percentage of that the Magnificent 7 makes up of the S&P 500 by market cap as a line chart over the S&P 500 market cap in bars. The concentration of the Magnificent 7 is growing as the S&P 500 index grows. It is at it's highest it has ever been.
 
-4. Performance Metrics Dashboard
-Implement KPI indicators comparing current metrics to historical averages:
+![QuickSight](images/line-bar.png)
 
-Total market capitalization with percentage change from previous periods
-Current concentration levels versus historical ranges
-Tracking of companies included in concentration calculations
+2. Magnificent 7 Market Cap Comparison
+- Pie chart showing the make up of the Magnificent 7 by Market Cap, single date view. We can see the difference from our earliest to our latest data point.
 
-5. Company-Specific Analysis Visualizations
+![QuickSight](images/then.png)
 
-The company details dataset allows us to examine individual company characteristics and their evolution over time.
+![QuickSight](images/now.png)
 
-6. Market Cap Distribution Analysis
-Create a treemap visualization that provides immediate insight into relative company sizes:
+3. Magnificent 7 Market Cap Trend
+- Line chart showing how the the market cap of the Magnificent 7 has changed over time. I had to apply a before and after filter to June 7th, 2024 as it was an anomoly, and needs further inspection. This shows how visualization tools can really help quick spot anomolies. When more trading dates were added I had to change the aggregation to median as more anomolies were found.
 
-Configure box sizes to represent current market capitalization values
-Implement color gradients based on recent percentage changes
-Include interactive tooltips displaying detailed company information
+![QuickSight](images/line.png)
 
-7. Capital Structure Evolution
-Design a multi-line chart tracking shares outstanding over time:
+- A similar line chart showing how the the market cap of the Magnificent 7 has changed over time, as a percentage of the S&P 500.
 
-Plot individual lines for each company's share count
-Add annotations for significant events like stock splits
-Include interactive elements to highlight specific time periods
+![QuickSight](images/percent-line.png)
 
-8. Trading Activity Visualizations
-
-The daily trading dataset enables detailed analysis of price and volume patterns.
-
-9. Price Movement Analysis
-Implement a comprehensive price visualization system:
-
-Create candlestick charts showing daily price ranges
-Add volume bars below the main chart
-Overlay moving averages for trend analysis
-
-9. Trading Volume Comparison
-Develop a comparative volume analysis dashboard:
-
-Design line charts comparing volume trends across companies
-Add highlighting for unusual trading activity
-Include period-over-period volume change calculations
-
-10. Magnificent 7 Performance Metrics
-
-The dedicated Magnificent 7 metrics dataset requires specialized visualizations to track their market impact.
-
-11. Market Share Evolution
-Create a stacked bar chart showing relative market share changes:
-
-Display each company's contribution to total Magnificent 7 capitalization
-Include percentage breakdowns for easy comparison
-Add trend indicators for significant share changes
-
-12. Competitive Position Analysis
-Implement a bump chart to track ranking changes:
-
-Plot company position changes over time
-Add annotations for significant ranking shifts
-Include filters for different time periods
-
-13. Data Quality Monitoring
-
-The failed collections dataset requires visualizations focused on maintaining data integrity.
-
-14. Collection Success Monitoring
-Design a comprehensive monitoring dashboard:
-
-Create a calendar heat map showing collection issues
-Implement a bar chart categorizing failure reasons
-Add trend lines tracking collection success rates
-
-These visualizations, when combined into cohesive dashboards, provide a complete picture of market concentration trends and their implications. The interactive nature of QuickSight allows users to explore the data dynamically, uncovering patterns and relationships that might not be immediately apparent in static reports.
+4. Trading Price Volitility
+- From our daily trading table we can visualize the range of relative gains and losses. Using opening price and closing price we can create a calculated field of the gain or loss for that day.
 
 
-#### Visualization Best Practices and Standards
-
-When implementing our market data visualizations in QuickSight, following consistent design principles ensures our dashboards are both informative and accessible. These best practices enhance data comprehension while maintaining a professional appearance that aligns with business reporting standards.
-
-1. Clear and Informative Titles
-
-Each visualization requires a descriptive title that immediately conveys its purpose and content to viewers. Rather than generic labels like "Market Cap Chart," implement specific titles such as "S&P 500 vs. Magnificent 7 Market Capitalization Trends (2020-2024)" that provide immediate context about the data being presented.
-
-2. Interactive Time Period Selection
-
-Implement standardized date filtering mechanisms across all dashboards to enable consistent temporal analysis. These filters should:
-
-- Provide preset ranges (YTD, Last 12 Months, Previous Quarter)
-- Allow custom date range selection
-- Maintain consistent formatting across all visualizations
-- Update dynamically to reflect available data ranges
-
-3. Enhanced Data Context Through Tooltips
-
-Design comprehensive tooltips that provide valuable context when users interact with visualization elements. These tooltips should display:
-
-- Precise numeric values with appropriate formatting
-- Relevant comparative metrics
-- Period-over-period changes
-- Additional context specific to the data point
-
-4. Reference Points for Analysis
-
-Incorporate reference lines and bands that provide important context for data interpretation. These reference elements should highlight:
-
-- Historical average values
-- Significant threshold levels
-- Regulatory or analytical boundaries
-- Seasonal patterns or cycles
-
-5. Visual Consistency
-
-Maintain a cohesive visual language across all dashboards through:
-
-- A unified color palette that assigns consistent colors to specific companies
-- Standard formatting for numeric values and dates
-- Consistent placement of common elements like filters and legends
-- Uniform chart sizing and spacing
-
-6. Performance Considerations
-
-    While implementing these visualization best practices, consider QuickSight's performance implications:
-
-    - Optimize date filters to leverage data partitioning
-    - Use appropriate level of data aggregation
-    - Implement efficient cross-filtering between visualizations
-    - Monitor dashboard load times and response rates
-
-    By adhering to these visualization standards, we create a professional and cohesive analytical environment that enables effective decision-making while maintaining optimal performance. These practices ensure our market concentration analysis is both insightful and accessible to all stakeholders.
-
-    Through consistent application of these principles, our dashboards will provide clear insights into market concentration trends while maintaining the professional standards expected in financial analysis and reporting.
+![QuickSight](images/price.png)
 
 
-## Future Enhancements and Strategic Roadmap
+5. Data Quality Monitoring
+- The failed collections dataset allows us to maintain data integrity. We can visualize how many trading days had tickers where we were unable to get market cap data for, leading to inaccuracy of our S&P 500 market cap calculation. This could also represent trading days to inspect where the API has inconsistent data. Since we made the assumption that the S&P 500 constituents are fixed from our point in time list, we can track how we lose accuracy the further we get from our holdings collection date.
+
+
+![QuickSight](images/fails.png)
+
+With these visualizations we have been able to make relative and absolute comparions, viewing trends over 4 years of data. We can continue to fine tune our data pipeline to anticipate anomolies that were not found in oure ETL process to be handled more gracefully. Data visualization tools allow us to quickly explore and generate insights from our data.
+
+## Future Enhancements
 
 Our current market concentration analysis pipeline provides valuable insights into the Magnificent 7's influence on the S&P 500. However, several strategic enhancements could further improve the accuracy, completeness, and utility of our analysis.
 
