@@ -3,6 +3,10 @@
 ## Project Overview
 This project implements a cloud-native data pipeline on Amazon Web Services (AWS) that tracks and analyzes the market concentration of the Magnificent 7 technology companies (Apple, Microsoft, Alphabet, Amazon, Nvidia, Meta, and Tesla) relative to the broader S&P 500 index. The pipeline collects historical market data, processes it for analysis, and makes it available for visualization through a series of automated AWS services. The goal is to help investors understand their true portfolio exposure through passive investments in ETFs that track the S&P 500.
 
+## Project Videos
+- [2-3 minute YouTube Summary]()
+- [8+ minute YouTube Presentation]()
+
 ## Repository Structure
 ```plaintext
 mags/
