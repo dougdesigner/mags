@@ -43,11 +43,12 @@ mags/
     │   │   └── lambda_function.py          # Main Lambda function
     │   └── trading-dates-generator-range/  # Generator for trading date ranges
     │       └── lambda_function.py          # Main Lambda function
-    ├── quicksight/                         # QuickSight visualizations and configurations
+    ├── quicksight/                         # Placeholder for QuickSight visualizations and configurations
     ├── redshift/                           # Redshift data warehouse scripts
     │   ├── copy_jobs.ipynb                 # Jupyter notebook for Redshift copy jobs
     │   ├── schema_definition.sql           # SQL script for schema definitions
     │   ├── table_definitions.ipynb         # Jupyter notebook for table definitions
+    │   └── data_analytics.ipynb            # Jupyter notebook for data analysis queries
     └── step-functions/                     # Step Function state machine definitions
         ├── historical-data-collection/     # Historical data collection state machine
         │   └── code.json                   # State machine definition
@@ -555,7 +556,7 @@ To create the state machine that orchestrates our data collection workflow, foll
     "States": {
       "GenerateDates": {
         "Type": "Task",
-        "Resource": "arn:aws:lambda:us-west-2:371484867872:function:trading-dates-generator",
+        "Resource": "arn:aws:lambda:us-west-2:ACCOUNT-ID:function:trading-dates-generator",
         "Next": "ProcessDates"
       },
       "ProcessDates": {
@@ -654,7 +655,7 @@ To implement the recovery workflow:
     "States": {
       "GenerateDates": {
         "Type": "Task",
-        "Resource": "arn:aws:lambda:us-west-2:371484867872:function:trading-dates-generator-range",
+        "Resource": "arn:aws:lambda:us-west-2:ACCOUNT-ID:function:trading-dates-generator-range",
         "Next": "ProcessDates"
       },
       "ProcessDates": {
@@ -1161,9 +1162,9 @@ After establishing the trust relationship, attach a permission policy that grant
 }
 ```
 
-After creating the IAM role, associate it with your Redshift serverless workspace. This integration enables Redshift to securely access the data files in our S3 bucket while maintaining proper access controls and security boundaries.
+Name it RedshiftS3ZeroETLRole. After creating the IAM role, associate it with your Redshift serverless workspace. This integration enables Redshift to securely access the data files in our S3 bucket while maintaining proper access controls and security boundaries.
 
-Note: We will need to save the ARN for this IAM role for use in our auto copy jobs. You can save it now and store it, you can also find it in your Namespace under the Security and encryption tab.
+Note: We will need to save the ARN for this IAM role for use in our auto copy jobs. You can save it now and store it, you can also find it in your Serverless Namespace under the Security and encryption tab.
 
 #### Redshift Query Editor v2
 
@@ -1196,7 +1197,7 @@ After executing this command, verify the successful creation through the success
 
 The table creation process follows a methodical approach, implementing structures that align with our Glue schema while optimizing for Redshift's specific performance characteristics. Each table's design incorporates distribution and sort key strategies that enhance query performance for our market analysis workload.
 
-![Redshift Query Editor v2](images/creat-tables.png)
+![Redshift Query Editor v2](images/create-tables.png)
 
 #### Design Principles
 
@@ -1214,76 +1215,76 @@ Next we define each table's structure to match our analytics pipeline structure.
     - This table maintains point-in-time snapshots of company information:
 ```sql
 CREATE TABLE market_data.company_details (
-   trading_date DATE,
+   trading_date VARCHAR(10),
    ticker VARCHAR(10),
    company_name VARCHAR(255),
-   market_cap NUMERIC(20,2),
-   shares_outstanding NUMERIC(20,2),
+   market_cap DOUBLE PRECISION,
+   shares_outstanding DOUBLE PRECISION,
    currency VARCHAR(3),
-   description TEXT,
+   description VARCHAR(1024),
    PRIMARY KEY (trading_date, ticker)
 )
 DISTKEY(trading_date)
 COMPOUND SORTKEY(trading_date, ticker);
 ```
 
-**Daily Trading Table**
-This structure captures daily market activity metrics:
+2. Daily Trading Table
+- This structure captures daily market activity metrics:
 ```sql
 -- Daily trading data for each company
 CREATE TABLE market_data.daily_trading (
-    trading_date DATE,
+    trading_date VARCHAR(10),
     ticker VARCHAR(10),
-    open_price NUMERIC(20,2),
-    high_price NUMERIC(20,2),
-    low_price NUMERIC(20,2),
-    close_price NUMERIC(20,2),
+    open_price DOUBLE PRECISION,
+    high_price DOUBLE PRECISION,
+    low_price DOUBLE PRECISION,
+    close_price DOUBLE PRECISION,
     volume BIGINT,
-    vwap NUMERIC(20,2),
+    vwap DOUBLE PRECISION
 )
 DISTKEY(trading_date)
 COMPOUND SORTKEY(trading_date, ticker);
 ```
 
-**Magnificent 7 Metrics Table**
-This specialized table tracks key metrics for our focus companies:
+3. Magnificent 7 Metrics Table
+- This specialized table tracks key metrics for our focus companies:
 ```sql
 -- Magnificent 7 specific metrics
 CREATE TABLE market_data.magnificent7_metrics (
-    trading_date DATE,
+    trading_date VARCHAR(10),
     ticker VARCHAR(10),
-    market_cap NUMERIC(20,2),
-    pct_of_mag7 NUMERIC(5,2),
-    pct_of_sp500 NUMERIC(5,2),
-    ranking INTEGER,
+    market_cap DOUBLE PRECISION,
+    pct_of_mag7 DOUBLE PRECISION,
+    pct_of_sp500 DOUBLE PRECISION,
+    ranking INTEGER
 )
 DISTKEY(trading_date)
 COMPOUND SORTKEY(trading_date, ticker);
 ```
 
-**Concentration Metrics Table**
-This table provides market-wide concentration analysis:
+4. Concentration Metrics Table
+- This table provides market-wide concentration analysis:
 ```sql
 -- Daily market concentration metrics
 CREATE TABLE market_data.concentration_metrics (
-    trading_date DATE,
-    total_mag7_market_cap NUMERIC(20,2),
-    sp500_total_market_cap NUMERIC(20,2),
-    mag7_pct_of_sp500 NUMERIC(5,2),
+    trading_date VARCHAR(10),
+    total_mag7_market_cap DOUBLE PRECISION,
+    sp500_total_market_cap DOUBLE PRECISION,
+    mag7_pct_of_sp500 DOUBLE PRECISION,
     mag7_companies_count INTEGER
 )
 DISTKEY(trading_date)
 SORTKEY(trading_date);
 ```
 
-**Failed Collections Table**
-This monitoring table tracks data quality issues:
+5. Failed Collections Table
+- This monitoring table tracks data quality issues:
 ```sql
 -- Failed collections tracking for monitoring
 CREATE TABLE market_data.failed_collections (
-    trading_date DATE,
+    trading_date VARCHAR(10),
     ticker VARCHAR(10),
-    reason TEXT,
+    reason TEXT
 )
 DISTKEY(trading_date)
 SORTKEY(trading_date);
@@ -1296,7 +1297,9 @@ The company_details table provides foundational company information, serving as 
 
 After creating each table by running the script, verify its successful creation through the schema browser in the query editor. The tables should appear under the Serverless: market_analytics > natvie database > dev> market_data > Tables. This verification ensures our foundation is properly established before proceeding with data loading operations.
 
-#### S3 Event Integration Configuration
+#### S3 Event Integration Configuration - optional
+
+Note: This section is incomplete and also optional. I was unable to setup auto copy jobs due to the permissions issues and I ran out of time to learn how to properly setup this ZeroETL integration. These steps were keep for future improvement. You can skip stragiht to S3 Data Loading.
 
 Amazon Redshift's S3 event integration enables automatic data ingestion from our analytics pipeline output. This integration ensures timely and efficient loading of market data into our Redshift tables as new data becomes available in S3.
 
@@ -1304,7 +1307,7 @@ Begin by accessing the S3 event integrations section within the Amazon Redshift 
 
 ![Redshift Serverless](images/event.png)
 
-#### Integration Details
+#### Integration Details - optional
 
 When creating the S3 event integration, provide clear identifying information that documents the integration's purpose and scope. Enter the following details:
 
@@ -1313,7 +1316,7 @@ Integration name: market-data-s3-integration
 Description: Automatic ingestion of daily market data from S3 to Redshift for Magnificent 7 and S&P 500 analysis
 ```
 
-#### S3 Source and Redshift Serverless Target Configuration
+#### S3 Source and Redshift Serverless Target Configuration - optional
 
 The integration requires proper configuration of both the source data location and target Redshift environment. Configure these settings as follows:
 
@@ -1328,13 +1331,13 @@ Select your newly created Redshift data warehouse `market-analysis`. If prompted
 This integration establishes the foundation for automated data loading from S3 to Redshift, enabling efficient and timely updates to your market analysis data warehouse. The next section will cover the configuration of automated COPY commands to load data into your Redshift tables.
 
 
-#### Configuring Automated S3 Data Loading with COPY Jobs
+#### S3 Data Loading
 
-The final step in our data pipeline configuration involves setting up automated COPY jobs to load data from S3 into our Redshift tables. We'll implement these jobs systematically, verifying functionality at each step to ensure reliable data loading.
+The final step in our data pipeline configuration involves using COPY commands to load data from S3 into our Redshift tables. We'll implement these jobs systematically, verifying functionality at each step to ensure reliable data loading.
 
 ![Redshift Query Editor v2](images/copy.png)
 
-Begin by accessing the Query Editor v2 in the Redshift console and connecting to your serverless workspace. We'll start with implementing COPY jobs for our core metrics tables. You can copy the following commands or open the [copy_jobs.ipynb](services/redshift/copy_jobs.ipynb) in the Redshift Query Editor v2.
+Begin by accessing the Query Editor v2 in the Redshift console and connecting to your serverless workspace. We'll start with implementing COPY commands for our core metrics tables. This requires using the IAM Role ARN we attached to our Serverless Namespace with the policy to access our S3 buckets. We can not run these commands as Root, we need an IAM Role to execute them. You can copy the following commands or open the [copy_jobs.ipynb](services/redshift/copy_jobs.ipynb) in the Redshift Query Editor v2.
 
 First, establish the concentration metrics loading process:
 
@@ -1342,9 +1345,7 @@ First, establish the concentration metrics loading process:
 COPY market_data.concentration_metrics
 FROM 's3://magnificent7-market-data/analytics/concentration_metrics/'
 IAM_ROLE 'arn:aws:iam::ACCOUNT-ID:role/RedshiftS3ZeroETLRole'
-FORMAT PARQUET
-JOB CREATE concentration_metrics_load
-AUTO ON;
+FORMAT AS PARQUET;
 ```
 
 Next, implement the company details loading process:
@@ -1352,72 +1353,71 @@ Next, implement the company details loading process:
 COPY market_data.company_details
 FROM 's3://magnificent7-market-data/analytics/company_details/'
 IAM_ROLE 'arn:aws:iam::ACCOUNT-ID:role/RedshiftS3ZeroETLRole'
-FORMAT PARQUET
-JOB CREATE company_details_load
-AUTO ON;
+FORMAT PARQUET;
 ```
 
-#### Validation of Initial Implementation
-After creating these initial jobs, verify their proper operation using the system copy job view:
-```sql
-SELECT * FROM SYS_COPY_JOB_INFO
-WHERE job_name IN ('concentration_metrics_load', 'company_details_load')
-ORDER BY job_name;
-```
-
-#### Complete COPY Job Configuration
-With our initial validation successful, proceed to implement the remaining COPY jobs for our analytical tables:
+Your Run status should say "1 out of 1 cell succeeded" after each run. Proceed to implement the remaining COPY commands for our analytical tables:
 
 For the Magnificent 7 metrics:
 ```sql
 COPY market_data.magnificent7_metrics
 FROM 's3://magnificent7-market-data/analytics/magnificent7_metrics/'
 IAM_ROLE 'arn:aws:iam::ACCOUNT-ID:role/RedshiftS3ZeroETLRole'
-FORMAT PARQUET
-JOB CREATE magnificent7_metrics_load
-AUTO ON;
+FORMAT PARQUET;
 ```
 
 For tracking failed collections:
 ```sql
 COPY market_data.failed_collections
 FROM 's3://magnificent7-market-data/analytics/failed_collections/'
-IAM_ROLE arn:aws:iam::ACCOUNT-ID:role/RedshiftS3ZeroETLRole
-FORMAT PARQUET
-JOB CREATE failed_collections_load
-AUTO ON;
+IAM_ROLE 'arn:aws:iam::ACCOUNT-ID:role/RedshiftS3ZeroETLRole'
+FORMAT PARQUET;
 ```
 
 For daily trading data:
 ```sql
 COPY market_data.daily_trading
 FROM 's3://magnificent7-market-data/analytics/daily_trading/'
-IAM_ROLE arn:aws:iam::ACCOUNT-ID:role/RedshiftS3ZeroETLRole
-FORMAT PARQUET
-JOB CREATE daily_trading_load
-AUTO ON;
+IAM_ROLE 'arn:aws:iam::ACCOUNT-ID:role/RedshiftS3ZeroETLRole'
+FORMAT PARQUET;
 ```
 
-#### Monitoring and Verification
-Monitor the status of all COPY jobs through the system view:
+#### Copy Verification
+Run a quick query to make sure that all your data was properly copied into your data warehouse.
+
 ```sql
-SELECT *
-FROM sys_copy_job
-ORDER BY job_name;
+SELECT * FROM "dev"."market_data"."concentration_metrics";
 ```
 
-Verify successful data loading by examining row counts in the schema browser. The tree view should reflect the current state of your data, updating as new files are processed from S3.
+```sql
+SELECT * FROM "dev"."market_data"."company_details";
+```
 
-With these COPY jobs successfully configured and validated, our data warehouse now automatically ingests new market data as it becomes available. This completes our data pipeline configuration, establishing an efficient, automated flow from raw data collection through to analytical availability.
+```sql
+SELECT * FROM "dev"."market_data"."magnificent7_metrics";
+```
+
+```sql
+SELECT * FROM "dev"."market_data"."failed_collections";
+```
+
+```sql
+SELECT * FROM "dev"."market_data"."daily_trading";
+```
+
+![Redshift Query Editor v2](images/daily.png)
+
+This completes our data pipeline configuration. In the future you can automate pulling copying data from S3 based on bucket events using copy jobs. Until then this portion of the pipeline will be manual.
 
 
 #### Data Analysis with Redshift Query Editor v2
 
 With our data successfully loaded into Redshift, we can begin analyzing market concentration trends and relationships. The Query Editor v2 provides a robust environment for exploring our data and developing analytical insights.
 
-Before conducting in-depth analysis, we should validate our data loading process with comprehensive quality checks. The following query provides essential metrics about our data coverage:
+Before conducting in-depth analysis, we should validate our data loading process with comprehensive quality checks You can copy and past the follow queries or you can upload them the [data_analysis.ipynb](services/redshift/data_analysis.ipynb) file.
 
 1. Data Validation
+- The following query provides essential metrics about our data coverage:
 ```sql
 SELECT 
    MIN(trading_date) as earliest_date,
@@ -1428,21 +1428,31 @@ FROM market_data.concentration_metrics;
 ```
 
 2. Quality Assurance
-To ensure the accuracy of our market concentration calculations, we can cross-validate our computed metrics against the underlying data:
+- To ensure the accuracy of our market concentration calculations, we can cross-validate our computed metrics against the underlying data:
 ```sql
 SELECT 
     c.trading_date,
-    ABS(c.mag7_pct_of_sp500 - 
-        (SUM(m.market_cap) / c.sp500_total_market_cap * 100)) as pct_difference
+    c.mag7_pct_of_sp500,
+    SUM(m.market_cap) as calc_mag7_cap,
+    c.sp500_total_market_cap,
+    (SUM(m.market_cap) / c.sp500_total_market_cap * 100) as calc_pct
 FROM market_data.concentration_metrics c
 JOIN market_data.magnificent7_metrics m 
     ON c.trading_date = m.trading_date
-GROUP BY c.trading_date, c.mag7_pct_of_sp500, c.sp500_total_market_cap
-HAVING pct_difference > .01;
+GROUP BY c.trading_date, c.mag7_pct_of_sp500, c.sp500_total_market_cap;
 ```
 
+- This query performs a data quality check by comparing two methods of calculating the Magnificent 7's percentage of S&P 500 market capitalization:
+
+    - The pre-calculated percentage stored in the `concentration_metrics` table
+    - A real-time calculation using individual company market caps from the `magnificent7_metrics` table
+
+- It joins the two tables by trading date and looks for any discrepancies greater than 0.01% between these values. Finding no results indicates perfect alignment between our aggregated metrics and the underlying company-level data, validating the accuracy of our ETL process and stored calculations.
+
+
+
 3. Time Series Analysis
-For analyzing market concentration trends over time, we can examine the evolution of the Magnificent 7's market dominance:
+    - For analyzing market concentration trends over time, we can examine the evolution of the Magnificent 7's market dominance:
 ```sql
 SELECT 
     trading_date,
@@ -1456,7 +1466,7 @@ ORDER BY trading_date;
 ```
 
 4. Market Concentration Patterns
-To understand the distribution of market capitalization within the Magnificent 7 group:
+    - To understand the distribution of market capitalization within the Magnificent 7 group:
 ```sql
 SELECT 
     m.trading_date,
@@ -1474,7 +1484,7 @@ WHERE m.trading_date = (SELECT MAX(trading_date) FROM market_data.magnificent7_m
 ```
 
 5. Query Performance Optimization
-To optimize query performance, especially for time-series analysis, consider these techniques:
+    - To optimize query performance, especially for time-series analysis, consider these techniques:
 ```sql
 -- Use time-based predicates to leverage our sort key
 SELECT 
@@ -1483,7 +1493,9 @@ SELECT
 FROM market_data.concentration_metrics
 WHERE trading_date BETWEEN DATEADD(month, -3, GETDATE()) AND GETDATE()
 ORDER BY trading_date;
+```
 
+```sql
 -- Implement efficient joins using our distribution key
 SELECT 
     t.trading_date,
@@ -1497,16 +1509,6 @@ JOIN market_data.magnificent7_metrics m
     AND t.ticker = m.ticker
 WHERE t.trading_date >= DATEADD(month, -1, GETDATE());
 ```
-
-#### Saving Analysis for Future Reference
-The Query Editor v2 allows us to save and organize our analytical queries for future reference. Create a folder structure that reflects different analysis types:
-
-- Data Validation
-- Time Series Analysis
-- Concentration Metrics
-- Performance Monitoring
-
-This organization enables efficient access to commonly used analyses and facilitates knowledge sharing across the team.
 
 The visualization capabilities within Query Editor v2 provide immediate insights through charts and graphs, though for more sophisticated visualizations, we will leverage Amazon QuickSight in the next section.
 
