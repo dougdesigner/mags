@@ -137,7 +137,7 @@ The platform implements a serverless event-driven architecture that collects, pr
 ## Prerequisites
 
 ### AWS Account with Administrative Access
-This project was created in an AWS Root Account with administrative access. Ensure you have administrative access to the services described in the Service Architecture. Resource policies as well as user and service IAM roles may need to be modified for not root users.
+This project was created in an AWS Root Account with administrative access. Ensure you have administrative access to the services described in the Service Architecture. Resource policies as well as user and service IAM roles may need to be modified for not root users. While this is not an ideal way to build on AWS, it was necessary given the timeline and complexity of services being integrated.
 
 ### Supported Region
 Modern data analytics workflows prioritize rapid insight generation through visualizations. Since Amazon QuickSight is central to our visualization strategy, deploy all resources in a single QuickSight-supported region. This pipeline uses **US West (Oregon) (us-west-2)**.
@@ -1297,40 +1297,6 @@ The company_details table provides foundational company information, serving as 
 
 After creating each table by running the script, verify its successful creation through the schema browser in the query editor. The tables should appear under the Serverless: market_analytics > natvie database > dev> market_data > Tables. This verification ensures our foundation is properly established before proceeding with data loading operations.
 
-#### S3 Event Integration Configuration - optional
-
-Note: This section is incomplete and also optional. I was unable to setup auto copy jobs due to the permissions issues and I ran out of time to learn how to properly setup this ZeroETL integration. These steps were keep for future improvement. You can skip stragiht to S3 Data Loading.
-
-Amazon Redshift's S3 event integration enables automatic data ingestion from our analytics pipeline output. This integration ensures timely and efficient loading of market data into our Redshift tables as new data becomes available in S3.
-
-Begin by accessing the S3 event integrations section within the Amazon Redshift console. This configuration establishes an automated connection between our S3 data source and Redshift workspace.
-
-![Redshift Serverless](images/event.png)
-
-#### Integration Details - optional
-
-When creating the S3 event integration, provide clear identifying information that documents the integration's purpose and scope. Enter the following details:
-
-```yaml
-Integration name: market-data-s3-integration
-Description: Automatic ingestion of daily market data from S3 to Redshift for Magnificent 7 and S&P 500 analysis
-```
-
-#### S3 Source and Redshift Serverless Target Configuration - optional
-
-The integration requires proper configuration of both the source data location and target Redshift environment. Configure these settings as follows:
-
-1. Source configuration
-Select the S3 bucket containing your market data. This should be the bucket receiving output from your Lambda analytics pipeline `s3://magnificent7-market-data/`.
-
-2. Target configuration
-Select your newly created Redshift data warehouse `market-analysis`. If prompted with a "Fix it for me" option for permissions, select it to automatically configure the necessary IAM permissions between S3 and Redshift.
-
-![Redshift Query Editor v2](images/i9n.png)
-
-This integration establishes the foundation for automated data loading from S3 to Redshift, enabling efficient and timely updates to your market analysis data warehouse. The next section will cover the configuration of automated COPY commands to load data into your Redshift tables.
-
-
 #### S3 Data Loading
 
 The final step in our data pipeline configuration involves using COPY commands to load data from S3 into our Redshift tables. We'll implement these jobs systematically, verifying functionality at each step to ensure reliable data loading.
@@ -1427,6 +1393,9 @@ SELECT
 FROM market_data.concentration_metrics;
 ```
 
+![Redshift Query Editor v2](images/q1.png)
+
+
 2. Quality Assurance
 - To ensure the accuracy of our market concentration calculations, we can cross-validate our computed metrics against the underlying data:
 ```sql
@@ -1441,6 +1410,9 @@ JOIN market_data.magnificent7_metrics m
     ON c.trading_date = m.trading_date
 GROUP BY c.trading_date, c.mag7_pct_of_sp500, c.sp500_total_market_cap;
 ```
+
+![Redshift Query Editor v2](images/q2.png)
+
 
 - This query performs a data quality check by comparing two methods of calculating the Magnificent 7's percentage of S&P 500 market capitalization:
 
@@ -1465,6 +1437,9 @@ FROM market_data.concentration_metrics
 ORDER BY trading_date;
 ```
 
+![Redshift Query Editor v2](images/q3.png)
+
+
 4. Market Concentration Patterns
     - To understand the distribution of market capitalization within the Magnificent 7 group:
 ```sql
@@ -1482,6 +1457,9 @@ JOIN market_data.company_details c
     AND m.ticker = c.ticker
 WHERE m.trading_date = (SELECT MAX(trading_date) FROM market_data.magnificent7_metrics);
 ```
+
+![Redshift Query Editor v2](images/q4.png)
+
 
 5. Query Performance Optimization
     - To optimize query performance, especially for time-series analysis, consider these techniques:
@@ -1510,7 +1488,10 @@ JOIN market_data.magnificent7_metrics m
 WHERE t.trading_date >= DATEADD(month, -1, GETDATE());
 ```
 
-The visualization capabilities within Query Editor v2 provide immediate insights through charts and graphs, though for more sophisticated visualizations, we will leverage Amazon QuickSight in the next section.
+![Redshift Query Editor v2](images/q5.png)
+
+
+The visualization capabilities within Query Editor v2 provide immediate insights through charts and graphs on portions of our data. For more sophisticated visualizations, we will leverage Amazon QuickSight in the next section.
 
 ### QuickSight Business Intelligance
 Amazon QuickSight is AWS's cloud-native business intelligence service that enables organizations to create and share interactive dashboards, perform ad-hoc analysis, and derive meaningful insights from their data. As a fully managed service, QuickSight eliminates the need for complex data visualization infrastructure while providing powerful analytical capabilities through an intuitive interface.
