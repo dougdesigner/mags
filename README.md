@@ -3,9 +3,14 @@
 ## Project Overview
 This project implements a cloud-native data pipeline on Amazon Web Services (AWS) that tracks and analyzes the market concentration of the Magnificent 7 technology companies (Apple, Microsoft, Alphabet, Amazon, Nvidia, Meta, and Tesla) relative to the broader S&P 500 index. The pipeline collects historical market data, processes it for analysis, and makes it available for visualization through a series of automated AWS services. The goal is to help investors understand their true portfolio exposure through passive investments in ETFs that track the S&P 500.
 
+Developer: Douglas Sanchez
+
+Github Repository: [dougdesigner/mags](https://github.com/dougdesigner/mags)
+
+
 ## Project Videos
-- [2-3 minute YouTube Summary]()
-- [8+ minute YouTube Presentation]()
+- [3 minute Project Summary - YouTube](https://youtu.be/LZ2kKWVRP9U)
+- [8+ minute Presentation - YouTube](https://youtu.be/3sjsdhG0eAk)
 
 ## Repository Structure
 ```plaintext
@@ -1054,13 +1059,9 @@ ORDER BY trading_date;
 [market_cap_extremes.sql](services/athena/market_cap_extremes.sql)
 ```sql
 -- Check for any extreme values that might indicate transformation issues
-SELECT 
-    trading_date,
-    ticker,
-    market_cap
-FROM market_data.company_details
-WHERE market_cap > 5e12  -- More than $5 trillion
-   OR market_cap < 1e11; -- Less than $100 billion
+SELECT trading_date, ticker, market_cap 
+FROM market_data.company_details 
+WHERE market_cap > 5e12 OR market_cap < 1e11;
 ```
 
 [min_max_concentration.sql](services/athena/min_max_concentration.sql)
